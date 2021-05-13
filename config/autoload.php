@@ -3,7 +3,7 @@ $config['js-files'] = array(
     array(
         "file" => 'assets/js/payment-gateway-settings-handle.js',
          "location" => array(
-          "integrations/stripe_payment_gateway",
+          "integrations/asaas_payment_gateway",
         ),
     ),
     array(

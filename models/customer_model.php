@@ -45,6 +45,17 @@ class Customer_model extends CI_Model {
 
         return $customer;
 	}
+
+	function get_asaas_customer($asaas_customer_id)
+	{
+		$sql = "SELECT * FROM `customer_card_detail` WHERE `customer_meta_data` LIKE '%$asaas_customer_id%'";
+		
+        $query = $this->db->query($sql);
+        $result = $query->row_array();
+
+        return $result;
+	}
+
     function get_bookedby_customer($customer_id)
 	{
             $this->db->where('customer_id', $customer_id);

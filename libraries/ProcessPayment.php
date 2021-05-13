@@ -1,5 +1,10 @@
 <?php
 
+use LifenPag\Asaas\V3\Client;
+use LifenPag\Asaas\V3\Domains\Customer as CustomerDomain;
+use LifenPag\Asaas\V3\Entities\Customer as CustomerEntity;
+use LifenPag\Asaas\V3\Collections\Customer as CustomerCollection;
+
 if (!defined('BASEPATH')) {
     exit('No direct script access allowed');
 }
@@ -66,26 +71,30 @@ class ProcessPayment
             $company_id = $params['company_id'];
         }
 
+        $this->asaas_url = ($this->ci->config->item('app_environment') == "development") ? "https://sandbox.asaas.com" : "https://www.asaas.com";
+
+        $this->asaas_env = ($this->ci->config->item('app_environment') == "development") ? "sandbox" : "production";
+
         $gateway_settings = $this->ci->Payment_gateway_model->get_payment_gateway_settings(
             $company_id
         );
                     
-                if($gateway_settings)
-                {
-                    $this->setCompanyGatewaySettings($gateway_settings);
-                    $this->setSelectedGateway($this->company_gateway_settings['selected_payment_gateway']);
-                    $this->populateGatewaySettings();
-                    $this->setCurrency();       
-                }       
+        if($gateway_settings)
+        {
+            $this->setCompanyGatewaySettings($gateway_settings);
+            $this->setSelectedGateway($this->company_gateway_settings['selected_payment_gateway']);
+            $this->populateGatewaySettings();
+            $this->setCurrency();       
+        }       
     }
 
     private function populateGatewaySettings()
     {
         switch ($this->selected_gateway) {
-            case 'stripe':
-                $this->stripe_private_key = $this->company_gateway_settings['stripe_secret_key'];
-                $this->stripe_public_key  = $this->company_gateway_settings['stripe_publishable_key'];
-                \Stripe\Stripe::setApiKey($this->stripe_private_key);
+            case 'asaas':
+                $gateway_meta_data = json_decode($this->company_gateway_settings['gateway_meta_data'], true);
+                $this->asaas_api_key = $gateway_meta_data['asaas_api_key'];
+                Client::connect($this->asaas_api_key, $this->asaas_env);
                 break;
         }
     }
@@ -293,14 +302,19 @@ class ProcessPayment
                         }
                     } 
                 }
+
+                $customer_data = $this->ci->Customer_model->get_customer($customer_id);
                 
                 $customer    = json_decode(json_encode($customer), 1);
+                $customer['customer_data'] = $customer_data;
+
+                $customer_meta_data = json_decode($customer['customer_meta_data'], true);
                
-                if(isset($customer['cc_tokenex_token']) && $customer['cc_tokenex_token'])
+                if(isset($customer_meta_data['customer_id']) && $customer_meta_data['customer_id'])
                 {
-                    $stripe_secret_key = $this->stripe_private_key;
+                    $asaas_api_key = $this->asaas_api_key;
                     // use tokenex for payments
-                    $charge = $this->make_payment($stripe_secret_key, $amount, $this->currency,$customer);
+                    $charge = $this->make_payment($asaas_api_key, $amount, $this->currency, $customer_meta_data, $customer);
 
                     $charge_id = null;
                     if($charge['success'])
@@ -314,8 +328,8 @@ class ProcessPayment
                     }
                     else
                     {
-                        $charge_id = isset($charge['charge_failed']) && $charge['charge_failed'] ? $charge['charge_failed'].'-charge_failed' : (isset($charge['message']) && $charge['message'] ? $charge['message'].'-charge_failed' : '');
-                        $this->setErrorMessage($charge['message']);
+                        $charge_id = isset($charge['errors']) && $charge['errors'] ? $charge['errors'] : null;
+                        $this->setErrorMessage($charge['errors']);
                     }
                 }
                 
@@ -362,19 +376,13 @@ class ProcessPayment
             $customer['cc_expiry_year'] = $card_data['cc_expiry_year'];
             $customer['cc_tokenex_token'] = $card_data['cc_tokenex_token'];
             $customer['cc_cvc_encrypted'] = $card_data['cc_cvc_encrypted'];
+            $customer['customer_meta_data'] = $card_data['customer_meta_data'];
         }
             
         $customer      = json_decode(json_encode($customer), 1);
         $hasExternalId = (isset($customer[$this->getExternalEntityField()]) and $customer[$this->getExternalEntityField()]);
-        $hasTokenexToken = (isset($customer['cc_tokenex_token']) and $customer['cc_tokenex_token']);
-        
-        if(!$hasTokenexToken)
-        {
-            $customer      = $this->ci->Customer_model->get_customer($customer_id);
-            $customer      = json_decode(json_encode($customer), 1);
-            $hasExternalId = (isset($customer[$this->getExternalEntityField()]) and $customer[$this->getExternalEntityField()]);
-            $hasTokenexToken = (isset($customer['cc_tokenex_token']) and $customer['cc_tokenex_token']);
-        }
+        $customer_meta_data = json_decode($customer['customer_meta_data'], true);
+        $hasTokenexToken = (isset($customer_meta_data['customer_id']) and $customer_meta_data['customer_id']);
         
         if (
             $this->areGatewayCredentialsFilled()
@@ -441,11 +449,12 @@ class ProcessPayment
     {
         $credentials                                     = array();
         $credentials['selected_payment_gateway']         = $this->selected_gateway; // itodo legacy
-        $credentials['stripe']['stripe_publishable_key'] = $this->company_gateway_settings['stripe_publishable_key'];
-
-        if (!$publicOnly) {
-            $credentials['stripe']['stripe_secret_key'] = $this->company_gateway_settings['stripe_secret_key'];
-        }
+        
+        $meta_data = json_decode($this->company_gateway_settings['gateway_meta_data'], true);
+        
+        $credentials['payment_gateway'] = array(
+            'asaas_api_key' => isset($meta_data["asaas_api_key"]) ? $meta_data["asaas_api_key"] : ""
+        );
 
         $result                                = $credentials;
 
@@ -481,7 +490,6 @@ class ProcessPayment
         $result = array("success" => true, "refund_id" => true);
         $this->ci->load->model('Payment_model');
         $this->ci->load->model('Customer_model');
-        $this->ci->load->library('tokenex');
    
         $payment = $this->ci->Payment_model->get_payment($payment_id);
         
@@ -512,8 +520,8 @@ class ProcessPayment
                         $amount = abs($payment['amount']) * 100; // in cents, only positive
                     }
 
-                    $stripe_secret_key = $this->stripe_private_key;
-                    $result = $this->refund_payment($stripe_secret_key, $amount, $payment['gateway_charge_id']);
+                    $asaas_api_key = $this->asaas_api_key;
+                    $result = $this->refund_payment($asaas_api_key, $amount, $payment['gateway_charge_id']);
                     
                     // $result = $this->refund_payment($this->selected_gateway, $payment['gateway_charge_id'], $amount, $this->currency, $booking_id, $payment['credit_card_id']);
                     
@@ -613,77 +621,192 @@ class ProcessPayment
         return $this->ci->db->insert_id();
     }
     
-    public function create_customer_id($token){
+    public function make_payment($asaas_api_key, $amount, $currency, $customer_meta_data, $customer){
 
-        $stripe_secret_key = $this->stripe_private_key;
+        $api_url = $this->asaas_url;
+        $method = '/api/v3/payments';
+        $method_type = 'POST';
 
-        $cust_data = array();
+        if(isset($customer['cc_tokenex_token']) && $customer['cc_tokenex_token']){
+            $data = array(
+                        'customer' => $customer_meta_data['customer_id'],
+                        'billingType' => 'CREDIT_CARD',
+                        'dueDate' => date("Y-m-d", strtotime("+ 1 day")),
+                        'value' => $amount,
+                        'creditCardToken' => $customer['cc_tokenex_token']
+                    );
+        } else {
 
-        $stripe = new Stripe\StripeClient($stripe_secret_key);
+            $data = array(
+                        'customer' => $customer_meta_data['customer_id'],
+                        'billingType' => 'CREDIT_CARD',
+                        'dueDate' => date("Y-m-d", strtotime("+ 1 day")),
+                        'value' => $amount,
+                        'creditCard' => array(
+                                                'holderName' => $customer['customer_name'],
+                                                'number' => base64_decode($customer['cc_number']),
+                                                'expiryMonth' => $customer['cc_expiry_month'],
+                                                'expiryYear' => '20'.$customer['cc_expiry_year'],
+                                                'ccv' => base64_decode($customer['cc_cvc_encrypted'])
+                                            ),
+                        'creditCardHolderInfo' => array(
+                                                'name' => $customer['customer_name'],
+                                                'email' => $customer['customer_data']['email'],
+                                                'cpfCnpj' => '86.233.944/0001-24',
+                                                'postalCode' => $customer['customer_data']['postal_code'],
+                                                'addressNumber' => $customer['customer_data']['address'],
+                                                'phone' => $customer['customer_data']['phone'],
+                                                'address' => $customer['customer_data']['address'],
+                                                'city' => $customer['customer_data']['city'],
+                                                'state' => $customer['customer_data']['region']
+                                                
+                                            )
+                    );
+        }
 
-        $description = 'Minical-stripe-customer-id'.strtotime(date('Y-m-d H:i:s'));
+        $headers = array(
+            "access_token: " . $asaas_api_key,
+            "Content-Type: application/json"
+        );
+
+        $response = $this->call_api($api_url, $method, $data, $headers, $method_type);
+
+        $response = json_decode($response, true);
+
+        if(isset($response['object']) && $response['object'] == 'payment' && isset($response['id']) && $response['id']) {
+
+            $update_card_data = array(
+                                    'cc_tokenex_token' => $response['creditCard']['creditCardToken'],
+                                    'cc_number' => 'XXXX XXXX XXXX '.$response['creditCard']['creditCardNumber'],
+                                    'cc_cvc_encrypted' => null
+                                );
+            $this->ci->Card_model->update_customer_primary_card($customer['customer_id'], $update_card_data);
+
+            return array('success' => true, 'charge_id' => $response['id']);
+        } else if(isset($response['errors']) && $response['errors']) {
+            return array('success' => false, 'errors' => $response['errors']);
+        }
+    }
+
+    public function refund_payment($asaas_api_key, $amount, $gateway_charge_id){
+
+        $api_url = $this->asaas_url;
+        $method = '/api/v3/payments/'.$gateway_charge_id.'/refund';
+        $method_type = 'POST';
+
+        $data = array();
+
+        $headers = array(
+            "access_token: " . $asaas_api_key,
+            "Content-Type: application/json"
+        );
+
+        $response = $this->call_api($api_url, $method, $data, $headers, $method_type);
+
+        $response = json_decode($response, true);
+
+        if(isset($response['object']) && $response['object'] == 'payment' && isset($response['id']) && $response['id'] && isset($response['status']) && $response['status'] == 'REFUNDED') {
+
+            return array('success' => true, 'refund_id' => $response['id']);
+        } else if(isset($response['errors']) && $response['errors']) {
+            return array('success' => false, 'message' => $response['errors']);
+        }
+    }
+
+    public function getCharges(){
+
+        $api_url = $this->asaas_url;
+        $method = '/api/v3/payments?status=CONFIRMED&limit=100';
+        $method_type = 'GET';
+
+        $data = array();
+
+        $headers = array(
+            "access_token: " . $this->asaas_api_key
+        );
+
+        $response = $this->call_api($api_url, $method, $data, $headers, $method_type);
+
+        $response = json_decode($response, true);
+
+        // prx($response);
+        return $response;
+    }
+
+    public function send_payment_link($payment_amount, $payment_link_name, $due_date){
+
+        $api_url = $this->asaas_url;
+        $method = '/api/v3/paymentLinks';
+        $method_type = 'POST';
+
+        $data = array(
+                        'name' => $payment_link_name,
+                        'value' => $payment_amount,
+                        'billingType' => 'UNDEFINED',
+                        'chargeType' => 'DETACHED',
+                        'endDate' => date("Y-m-d", strtotime("+ 10 day")),
+                        'dueDateLimitDays' => $due_date
+                    );
+
+        $headers = array(
+            "access_token: " . $this->asaas_api_key,
+            "Content-Type: application/json"
+        );
+
+        $response = $this->call_api($api_url, $method, $data, $headers, $method_type);
+
+        $response = json_decode($response, true);
+        return $response;
+    }
+
+    function get_customer_name($asaas_customer_id){
+        $this->ci->load->model('../extensions/'.$this->ci->current_payment_gateway.'/models/Customer_model');
+        $customer = $this->ci->Customer_model->get_asaas_customer($asaas_customer_id);
+        return $customer;
+    }
+
+    function get_booking($asaas_payment_id){
+        $this->ci->load->model('../extensions/'.$this->ci->current_payment_gateway.'/models/Asaas_model');
+        $booking = $this->ci->Asaas_model->get_booking_details($asaas_payment_id);
+        return $booking;
+    }
+
+    function create_customer($customer_data)
+    {
+        $customer = new CustomerEntity();
+        $customer->name = $customer_data['customer_name'];
+        $customer->email = isset($customer_data['email']) && $customer_data['email'] ? $customer_data['email'] : '';
+
+        $customerCreated = $customer->create();
+
+        $customer_repsonse = json_decode(json_encode($customerCreated, true), true);
+
+        return array('success' => true, 'customer_id' => $customer_repsonse['id']);
         
-        $customer_response = $stripe->customers->create([
-            'description' => $description,
-            'card'  => $token
-        ]);
-
-        $customer_response = json_decode(json_encode($customer_response, true), true);
-
-        return array('success' => true, 'customer_id' => $customer_response['id']);
-
     }
 
-    public function create_token($cvc, $cc_number, $cc_expiry_month, $cc_expiry_year){
+    public function call_api($api_url, $method, $data, $headers, $method_type = 'POST'){
 
-        $stripe_secret_key = $this->stripe_private_key;
-
-        $stripe = new Stripe\StripeClient($stripe_secret_key);
-
-        $stripe_token_resp = $stripe->tokens->create([
-            'card' => [
-                'number' => $cc_number,
-                'exp_month' => $cc_expiry_month,
-                'exp_year' => $cc_expiry_year,
-                'cvc' => $cvc,
-            ],
-        ]);
-
-        $stripe_token_response = json_decode(json_encode($stripe_token_resp, true), true);
-
-        return array('success' => true, 'token' => $stripe_token_response['id'], 'cc_last_digits' => $stripe_token_response['card']['last4']);
-
-    }
-
-    public function make_payment($stripe_secret_key, $amount, $currency, $customer){
-
-        $stripe = new Stripe\StripeClient($stripe_secret_key);
-
-        $description = 'Minical-booking-payment'.strtotime(date('Y-m-d H:i:s'));
+        $url = $api_url . $method;
         
-        $stripe_charge = $stripe->charges->create([
-          'amount' => $amount,
-          'currency' => $currency,
-          'customer' => $customer['stripe_customer_id'],
-          'description' => $description
-        ]);
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+            
+        if($method_type == 'GET'){
 
-        $stripe_charge = json_decode(json_encode($stripe_charge, true), true);
-
-        return array('success' => true, 'charge_id' => $stripe_charge['id']);
-    }
-
-    public function refund_payment($stripe_secret_key, $amount, $gateway_charge_id){
-
-        $stripe = new Stripe\StripeClient($stripe_secret_key);
-
-        $refund_charge = $stripe->refunds->create([
-            'charge' => $gateway_charge_id,
-            'amount' => $amount
-        ]);
-
-        $refund_charge = json_decode(json_encode($refund_charge, true), true);
-
-        return array('success' => true, 'refund_id' => $refund_charge['id']);
+        } else {
+            curl_setopt($curl, CURLOPT_POST, 1);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
+        }
+               
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+        $response = curl_exec($curl);
+        
+        curl_close($curl);
+        
+        return $response;
     }
 }

@@ -1,17 +1,15 @@
 var settings;
 innGrid.ajaxCache = innGrid.ajaxCache || {};
 
-innGrid._getStripeForm = function() {
+innGrid._getAsaasForm = function () {
     return $("<div/>", {})
-        .append(innGrid._getHorizontalInput("Publishable Key", "stripe_publishable_key", settings.stripe.stripe_publishable_key))
-        .append(innGrid._getHorizontalInput("Secret Key", "stripe_secret_key", settings.stripe.stripe_secret_key));
+        .append(innGrid._getHorizontalInput("API Key", "asaas_api_key", settings.payment_gateway.asaas_api_key))
 };
 
 innGrid._getHorizontalInput = function (label, name, value)
 {
     if( 
-            name == 'stripe_publishable_key' || 
-            name == 'stripe_secret_key'
+            name == 'asaas_api_key'
         )
     {
         var sensitiveData = '<a title = "Show '+label+'" class="show_password" href="javascript:"><i class="fa fa-eye" ></i></a>';
@@ -54,8 +52,8 @@ innGrid._updatePaymentGatewayForm = function(selected_payment_gateway) {
         $("#form-div").html('');
         $("#update-button").text(l("Update", true));
     }
-    else if (selected_payment_gateway === 'stripe') {
-        $("#form-div").html(innGrid._getStripeForm());
+    else if (selected_payment_gateway === 'asaas') {
+        $("#form-div").html(innGrid._getAsaasForm());
         $("#update-button").text(l("Update", true));
     }
 };
@@ -63,7 +61,7 @@ innGrid._updatePaymentGatewayForm = function(selected_payment_gateway) {
 $(function (){
 
     var gatewayTypes = {
-        'Stripe': 'stripe',
+        'Asaas': 'asaas',
     };
     
     // load saved payment gateway settings data
@@ -72,7 +70,7 @@ $(function (){
         $.ajax({
             type: "POST",
             dataType: 'json',
-            url: getBaseURL() + 'settings/integrations/get_stripe_payment_gateway_settings',
+            url: getBaseURL() + 'get_asaas_payment_gateway_settings',
             success: function( data ) {
                 settings = data;
                 innGrid.ajaxCache.paymentGatewaySettings = data;
@@ -139,8 +137,8 @@ $(function (){
             default:
                 valid = true;
                 break;
-            case 'stripe':
-                if (fields['stripe_publishable_key'] != '' && fields['stripe_secret_key'] != '') {
+            case 'asaas':
+                if (fields['asaas_api_key'] != '') {
                     valid = true;
                 } else {
                     alert(l('Please fill all fields'));
@@ -152,17 +150,10 @@ $(function (){
             $.ajax({
                 type    : "POST",
                 dataType: 'json',
-                url     : getBaseURL() + 'settings/integrations/update_stripe_payment_gateway_settings/',
+                url     : getBaseURL() + 'update_asaas_payment_gateway_settings/',
                 data: fields,
                 success: function( data ) {
-                    if(data.authorizationCodeUrl)
-                    {
-                        var url = data.authorizationCodeUrl.replace(/\"/g, "");
-                        url = url.replace(/\/+/g, '');
-                        window.location.href = url;
-                    }
-                    else
-                        alert(l("Settings updated."));
+                    alert(l("Settings updated."));
                 }
             });
         }
