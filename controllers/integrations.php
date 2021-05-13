@@ -13,7 +13,7 @@ class Integrations extends MY_Controller
         $this->load->model('../extensions/'.$this->module_name.'/models/Card_model');
         $this->load->model('../extensions/'.$this->module_name.'/models/Customer_model');
         
-        $this->load->library('paymentgateway');
+        $this->load->library('PaymentGateway');
 		
         $view_data['menu_on'] = true;       
 		$this->load->vars($view_data);
