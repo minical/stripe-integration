@@ -72,7 +72,7 @@ $(function (){
         $.ajax({
             type: "POST",
             dataType: 'json',
-            url: getBaseURL() + 'settings/integrations/get_stripe_payment_gateway_settings',
+            url: getBaseURL() + 'get_stripe_payment_gateway_settings',
             success: function( data ) {
                 settings = data;
                 innGrid.ajaxCache.paymentGatewaySettings = data;
@@ -152,7 +152,7 @@ $(function (){
             $.ajax({
                 type    : "POST",
                 dataType: 'json',
-                url     : getBaseURL() + 'settings/integrations/update_stripe_payment_gateway_settings/',
+                url     : getBaseURL() + 'update_stripe_payment_gateway_settings/',
                 data: fields,
                 success: function( data ) {
                     if(data.authorizationCodeUrl)

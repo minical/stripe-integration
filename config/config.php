@@ -6,6 +6,6 @@ $config = array(
     "is_default_active" => 1,
     "version" => "1.0.0",
     "image_name" => "pay-per-click.png",
-    "setting_link" => "settings/integrations/stripe_payment_gateway",
+    "setting_link" => "stripe_payment_gateway",
     "gateway_key" => "stripe"
 );
