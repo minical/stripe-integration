@@ -10,12 +10,12 @@ function stripe_tokenize($data) {
 
     $CI = &get_instance();
     
-    $CI->load->library('../extensions/stripe-integration/libraries/processpayment');
-    $token_response = $CI->processpayment->create_token($filtered_data['card']['service_code'],
+    $CI->load->library('../extensions/stripe-integration/libraries/ProcessPayment');
+    $token_response = $CI->ProcessPayment->create_token($filtered_data['card']['service_code'],
      $filtered_data['card']['card_number'], $filtered_data['card']['expiration_month'], $filtered_data['card']['expiration_year']);
 
     if($token_response['success']){
-        $response = $CI->processpayment->create_customer_id($token_response['token']);
+        $response = $CI->ProcessPayment->create_customer_id($token_response['token']);
 
         if($response['success']){
             $card_details = array(
