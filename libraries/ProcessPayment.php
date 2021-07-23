@@ -295,12 +295,15 @@ class ProcessPayment
                 }
                 
                 $customer    = json_decode(json_encode($customer), 1);
-               
-                if(isset($customer['cc_tokenex_token']) && $customer['cc_tokenex_token'])
+                $customer['customer_data'] = $customer_data;
+                $customer_meta_data = json_decode($customer['customer_meta_data'], true);
+
+                if(isset($customer_meta_data['customer_id']) && $customer_meta_data['customer_id'])
                 {
                     $stripe_secret_key = $this->stripe_private_key;
                     // use tokenex for payments
-                    $charge = $this->make_payment($stripe_secret_key, $amount, $this->currency,$customer);
+
+                    $charge = $this->make_payment($stripe_secret_key, $amount, $this->currency, $customer, $customer_meta_data);
 
                     $charge_id = null;
                     if($charge['success'])
@@ -355,25 +358,28 @@ class ProcessPayment
         unset($customer['cc_cvc_encrypted']);
         
         $card_data = $this->ci->Card_model->get_active_card($customer_id, $this->ci->company_id);
-            
+
         if(isset($card_data) && $card_data){
             $customer['cc_number'] = $card_data['cc_number'];
             $customer['cc_expiry_month'] = $card_data['cc_expiry_month'];
             $customer['cc_expiry_year'] = $card_data['cc_expiry_year'];
             $customer['cc_tokenex_token'] = $card_data['cc_tokenex_token'];
             $customer['cc_cvc_encrypted'] = $card_data['cc_cvc_encrypted'];
+            $customer['meta_data'] = $card_data['customer_meta_data'];
         }
-            
+        // prx($customer);
+
+        $stripe_customer_id = json_decode($customer['meta_data'])->customer_id;
         $customer      = json_decode(json_encode($customer), 1);
         $hasExternalId = (isset($customer[$this->getExternalEntityField()]) and $customer[$this->getExternalEntityField()]);
-        $hasTokenexToken = (isset($customer['cc_tokenex_token']) and $customer['cc_tokenex_token']);
+        $hasTokenexToken = (isset($stripe_customer_id) and $stripe_customer_id);
         
         if(!$hasTokenexToken)
         {
             $customer      = $this->ci->Customer_model->get_customer($customer_id);
             $customer      = json_decode(json_encode($customer), 1);
             $hasExternalId = (isset($customer[$this->getExternalEntityField()]) and $customer[$this->getExternalEntityField()]);
-            $hasTokenexToken = (isset($customer['cc_tokenex_token']) and $customer['cc_tokenex_token']);
+            $hasTokenexToken = (isset($stripe_customer_id) and $stripe_customer_id);
         }
         
         if (
@@ -505,8 +511,8 @@ class ProcessPayment
                 }
                 
                 $customer    = json_decode(json_encode($customer), 1);
-                if(isset($customer['cc_tokenex_token']) && $customer['cc_tokenex_token'])
-                {
+                // if(isset($customer['cc_tokenex_token']) && $customer['cc_tokenex_token'])
+                // {
                     if($payment_type == 'full'){
                         $amount = abs($payment['amount']) * 100; // in cents, only positive
                     }
@@ -516,7 +522,7 @@ class ProcessPayment
                     
                     // $result = $this->refund_payment($this->selected_gateway, $payment['gateway_charge_id'], $amount, $this->currency, $booking_id, $payment['credit_card_id']);
                     
-                }
+                // }
                 
             }
         } catch (Exception $e) {
@@ -654,7 +660,7 @@ class ProcessPayment
 
     }
 
-    public function make_payment($stripe_secret_key, $amount, $currency, $customer){
+    public function make_payment($stripe_secret_key, $amount, $currency, $customer, $customer_meta_data){
 
         $stripe = new Stripe\StripeClient($stripe_secret_key);
 
@@ -663,7 +669,7 @@ class ProcessPayment
         $stripe_charge = $stripe->charges->create([
           'amount' => $amount,
           'currency' => $currency,
-          'customer' => $customer['stripe_customer_id'],
+          'customer' => $customer_meta_data['customer_id'],
           'description' => $description
         ]);
 
