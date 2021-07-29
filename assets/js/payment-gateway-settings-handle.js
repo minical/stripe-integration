@@ -3,8 +3,8 @@ innGrid.ajaxCache = innGrid.ajaxCache || {};
 
 innGrid._getStripeForm = function() {
     return $("<div/>", {})
-        .append(innGrid._getHorizontalInput("Publishable Key", "stripe_publishable_key", settings.stripe.stripe_publishable_key))
-        .append(innGrid._getHorizontalInput("Secret Key", "stripe_secret_key", settings.stripe.stripe_secret_key));
+        .append(innGrid._getHorizontalInput(l('stripe-integration/Public Key'), "stripe_publishable_key", settings.stripe.stripe_publishable_key))
+        .append(innGrid._getHorizontalInput(l('stripe-integration/Secret Key'), "stripe_secret_key", settings.stripe.stripe_secret_key));
 };
 
 innGrid._getHorizontalInput = function (label, name, value)
@@ -143,7 +143,7 @@ $(function (){
                 if (fields['stripe_publishable_key'] != '' && fields['stripe_secret_key'] != '') {
                     valid = true;
                 } else {
-                    alert(l('Please fill all fields'));
+                    alert(l('stripe-integration/Please fill all fields'));
                 }
                 break;
         }
@@ -162,7 +162,7 @@ $(function (){
                         window.location.href = url;
                     }
                     else
-                        alert(l("Settings updated."));
+                        alert(l("stripe-integration/Settings updated."));
                 }
             });
         }

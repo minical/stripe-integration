@@ -41,3 +41,4 @@ function stripe_tokenize($data) {
 
     return $data;
 }
+
