@@ -622,7 +622,7 @@ class ProcessPayment
         $description = 'Minical-booking-payment' . strtotime(date('Y-m-d H:i:s'));
 
         $stripe_charge = $stripe->charges->create([
-            'amount' => $amount,
+            'amount' => $amount * 100,
             'currency' => $currency,
             'customer' => $customer_meta_data['customer_id'],
             'description' => $description,
@@ -640,7 +640,7 @@ class ProcessPayment
 
         $refund_charge = $stripe->refunds->create([
             'charge' => $gateway_charge_id,
-            'amount' => $amount,
+            'amount' => $amount * 100,
         ]);
 
         $refund_charge = json_decode(json_encode($refund_charge, true), true);
