@@ -8,5 +8,6 @@ $config = array(
     "image_name" => "pay-per-click.png",
     "setting_link" => "stripe_payment_gateway",
     "gateway_key" => "stripe",
+    "categories" => array("payment_process"),
     "marketplace_product_link" => "https://marketplace.minical.io/product/stripe-payment-gateway"
 );
