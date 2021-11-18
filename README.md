@@ -45,4 +45,4 @@ A PATCH version is when a fix is added, it should be considered safe to update p
 
 ### License
 
-[The Open Software License 3.0 (OSL-3.0)](https://github.com/minical/minical/blob/main/LICENSE)
+[The Open Software License 3.0 (OSL-3.0)]()
