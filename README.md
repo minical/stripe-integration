@@ -15,7 +15,7 @@
 This extension is devised as the channel to make payments. The procedure to make payments includes the customer requiring to fill in some details, like credit/debit card number, expiry date, and CVV. 
 
 ### Installation
-* Fork the repository https://github.com/minical/stripe-integration or clone it locally, or you can get this extension from [miniCal MarketPlace](). 
+* Fork the repository https://github.com/minical/stripe-integration or clone it locally, or you can get this extension from [miniCal MarketPlace](https://marketplace.minical.io/product/stripe-payment-gateway/). 
 * Upload the extension folder into the /public/application/extensions directory.
 * Activate the extension through the ‘Extensions’ screen in miniCal.
 * Click on the setting icon. It will redirect you to the stripe setting page. Fill in all the details then you are good to go.
