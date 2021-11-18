@@ -20,9 +20,11 @@ This extension is devised as the channel to make payments. The procedure to make
 * Activate the extension through the ‘Extensions’ screen in miniCal.
 * Click on the setting icon. It will redirect you to the stripe setting page. Fill in all the details then you are good to go.
 
+<img src="https://snipboard.io/y0OpK6.jpg" alt=""> 
+
 ### Features
-*	Easily connect to miniCal.
-*	Safe payment, refund and capture.
+* Easily connect to miniCal.
+* Safe payment, refund and capture.
 * Support card payment options with different Currencies.
 * Provide a detailed invoice.
 
