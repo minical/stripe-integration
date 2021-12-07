@@ -64,6 +64,10 @@ class ProcessPayment
             $company_id = $params['company_id'];
         }
 
+        if(!$company_id){
+            $company_id = $this->ci->session->userdata('anonymous_company_id');
+        }
+
         $gateway_settings = $this->ci->Payment_gateway_model->get_payment_gateway_settings($company_id);
 
         if ($gateway_settings) {
