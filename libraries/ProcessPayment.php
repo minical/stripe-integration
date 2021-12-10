@@ -476,7 +476,7 @@ class ProcessPayment
 
                 $customer = json_decode(json_encode($customer), 1);
                 if ($payment_type == 'full') {
-                    $amount = abs($payment['amount']) * 100; // in cents, only positive
+                    $amount = abs($payment['amount']); // in cents, only positive
                 }
 
                 $stripe_secret_key = $this->stripe_private_key;
