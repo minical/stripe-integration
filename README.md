@@ -1,6 +1,6 @@
 <p>
 	<h1 align="center">
-	Stripe Inegration</h1>
+	Stripe Integration</h1>
 </p>
 
 ## Table of Contents
@@ -24,7 +24,7 @@ This extension is devised as the channel to make payments. The procedure to make
 
 ### Features
 * Easily connect to miniCal.
-* Safe payment, refund and capture.
+* Safe payment, refund, and capture.
 * Support card payment options with different Currencies.
 * Provide a detailed invoice.
 
@@ -39,7 +39,7 @@ A MAJOR is very rare, it would only be considered if the source was effectively 
 
 A MINOR is when there are significant changes that affect core structures. This increment would likely break some 3rd party modules.
 
-A FEATURE version is when new extensions or features are added (such as a payment gateway, shipping module etc). Updating a feature version is at a low risk of breaking 3rd party modules.
+A FEATURE version is when new extensions or features are added (such as a payment gateway, shipping module, etc). Updating a feature version is at a low risk of breaking 3rd party modules.
 
 A PATCH version is when a fix is added, it should be considered safe to update patch versions e.g 1.2.3.4 to 1.2.3.5
 
