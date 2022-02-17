@@ -9,5 +9,6 @@ $config = array(
     "setting_link" => "stripe_payment_gateway",
     "gateway_key" => "stripe",
     "categories" => array("payment_process"),
+    "is_open_source" => true,
     "marketplace_product_link" => "https://marketplace.minical.io/product/stripe-payment-gateway"
 );
