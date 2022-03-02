@@ -43,7 +43,13 @@ function stripe_tokenize($data) {
                 $meta['token'] = $token_response['token'];
             }
             $card_details['customer_meta_data'] = json_encode($meta);
-            $CI->Card_model->create_customer_card_info($card_details);
+            $cust_data = $CI->Card_model->get_card_details($customer_data['customer_id'], $customer_data['company_id']);
+            
+            if($cust_data){
+                $CI->Card_model->update_customer_card($cust_data['id'], $cust_data['customer_id'], $card_details);
+            } else {
+                $CI->Card_model->create_customer_card_info($card_details);
+            }
         }
     }
 
