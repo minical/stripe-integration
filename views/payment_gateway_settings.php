@@ -1,7 +1,18 @@
-<div class="page-header">
-	<h2><?php echo l('stripe-integration/payment gateway settings'); ?></h2>
+<div id="printable-container">
+	<div class="app-page-title">
+   <div class="page-title-wrapper">
+        <div class="page-title-heading">
+            <div class="page-title-icon">
+                <i class="pe-7s-notebook text-success"></i>
+            </div>
+			<?php echo l('stripe-integration/payment gateway settings'); ?>
+        </div>
+    </div>
 </div>
 
+
+<div class="main-card card">
+    <div class="card-body">
     <?php if($this->session->flashdata('setting_update')){ ?>
         <div class="alert alert-success">
             <?php echo $this->session->flashdata('setting_update'); ?>
@@ -27,3 +38,6 @@
 		<div class="btn btn-light" id="update-button"><?php echo l('stripe-integration/update'); ?></div>
 	</div>
 </div>	
+
+	</div>
+	</div>
