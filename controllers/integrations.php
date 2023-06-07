@@ -23,7 +23,8 @@ class Integrations extends MY_Controller
     {       
         $data['selected_sidebar_link'] = 'Payment Gateways';
         $data['main_content'] = '../extensions/'.$this->module_name.'/views/payment_gateway_settings';
-        
+        $stripeData = $this->paymentgateway->getGatewayCredentials();
+        $data['stripeData']=$stripeData['stripe'];
         $this->load->view('includes/bootstrapped_template', $data);
     }
 
@@ -65,6 +66,12 @@ class Integrations extends MY_Controller
         echo json_encode($data);
     }
 
+    function deconfigure_stripe_apikey(){
+
+        $this->Card_model->deconfigure_stripe_apikey($this->company_id);
+           
+    }
+    
     function _create_accounting_log($log) {
         $log_detail =  array(
                     "user_id" => $this->user_id,

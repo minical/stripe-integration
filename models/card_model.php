@@ -117,4 +117,11 @@ class Card_model extends CI_Model {
             show_error($this->db->_error_message());
 		}
     }
+
+    function deconfigure_stripe_apikey($company_id){
+
+		$this->db->where('company_id', $company_id);
+		$this->db->where('selected_payment_gateway', 'stripe');
+		$this->db->delete('company_payment_gateway');
+	}
 }

@@ -172,4 +172,20 @@ $(function (){
 
 
 });
-    
+
+$('body').on('click','.deconfigure-stripe',function(e){
+    if (confirm('Are you sure to deconfigure Payment Gateway Settings ?')) {
+            
+        $.ajax({
+            url     : getBaseURL() + 'deconfigure_stripe_apikey', 
+            type    : "POST",
+            success: function(response) {
+            //console.log(response);
+            window.location.reload();
+
+            }
+        });
+
+    }
+
+});   
