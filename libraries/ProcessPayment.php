@@ -80,9 +80,11 @@ class ProcessPayment
 
     private function populateGatewaySettings()
     {
-                $this->stripe_private_key = $this->company_gateway_settings['stripe_secret_key'];
-                $this->stripe_public_key = $this->company_gateway_settings['stripe_publishable_key'];
-                \Stripe\Stripe::setApiKey($this->stripe_private_key);
+        $this->stripe_url = "https://api.stripe.com/v1/";
+
+        $this->stripe_private_key = $this->company_gateway_settings['stripe_secret_key'];
+        $this->stripe_public_key = $this->company_gateway_settings['stripe_publishable_key'];
+        \Stripe\Stripe::setApiKey($this->stripe_private_key);
     }
 
     private function setCurrency()
@@ -340,16 +342,76 @@ class ProcessPayment
             $customer['cc_cvc_encrypted'] = $card_data['cc_cvc_encrypted'];
             $customer['meta_data'] = $card_data['customer_meta_data'];
         }
-        $stripe_customer_id = json_decode($customer['meta_data'])->customer_id;
+        $stripe_customer_id = "";
+
+        if(isset(json_decode($customer['meta_data'])->customer_id) &&
+            json_decode($customer['meta_data'])->customer_id
+        ) {
+
+            $stripe_customer_id = json_decode($customer['meta_data'])->customer_id;
+        }
         $customer = json_decode(json_encode($customer), 1);
         $hasExternalId = (isset($customer[$this->getExternalEntityField()]) and $customer[$this->getExternalEntityField()]);
         $hasTokenexToken = (isset($stripe_customer_id) and $stripe_customer_id);
 
         if (!$hasTokenexToken) {
+
+            $stripe_secret_key = $this->stripe_private_key;
+
+            $headers = array(
+                "Authorization: Bearer " . $stripe_secret_key,
+                "Content-Type: application/x-www-form-urlencoded"
+            );
+            
+            $data = "card[number]=%CARD_NUMBER%&card[exp_month]=%EXPIRATION_MM%&card[exp_year]=%EXPIRATION_YYYY%&card[cvc]=%SERVICE_CODE%";
+
+            $stripe_token_resp = send_card_request(
+                $this->stripe_url."tokens",
+                json_decode($customer['meta_data'])->token,
+                $data,
+                $headers,
+                'POST',
+                false
+            );
+
+            $token = $stripe_token_resp['id'];
+            $cust_id_resp = $this->create_customer_id($token);
+
+            if(
+                isset($cust_id_resp['customer_id']) &&
+                $cust_id_resp['success']
+            ){
+                $meta['customer_id'] = $cust_id_resp['customer_id'];
+                $meta['token'] = $token;
+                $card_details['customer_meta_data'] = json_encode($meta);
+
+                if($card_details && count($card_details) > 0) {
+                    $this->ci->Card_model->update_customer_primary_card($customer_id, $card_details);
+                }
+            } 
+
             $customer = $this->ci->Customer_model->get_customer($customer_id);
-            $customer = json_decode(json_encode($customer), 1);
-            $hasExternalId = (isset($customer[$this->getExternalEntityField()]) and $customer[$this->getExternalEntityField()]);
-            $hasTokenexToken = (isset($stripe_customer_id) and $stripe_customer_id);
+        
+            unset($customer['cc_number']);
+            unset($customer['cc_expiry_month']);
+            unset($customer['cc_expiry_year']);
+            unset($customer['cc_tokenex_token']);
+            unset($customer['cc_cvc_encrypted']);
+            
+            $card_data = $this->ci->Card_model->get_active_card($customer_id, $this->ci->company_id);
+                
+            if(isset($card_data) && $card_data) {
+                $customer['cc_number'] = $card_data['cc_number'];
+                $customer['cc_expiry_month'] = $card_data['cc_expiry_month'];
+                $customer['cc_expiry_year'] = $card_data['cc_expiry_year'];
+                $customer['cc_tokenex_token'] = $card_data['cc_tokenex_token'];
+                $customer['cc_cvc_encrypted'] = $card_data['cc_cvc_encrypted'];
+                $customer['customer_meta_data'] = $card_data['customer_meta_data'];
+            }
+                
+            $customer      = json_decode(json_encode($customer), 1);
+            $customer_meta_data = json_decode($customer['customer_meta_data'], true);
+            $hasTokenexToken = (isset($customer_meta_data['token']) and $customer_meta_data['token']);
         }
 
         if (
