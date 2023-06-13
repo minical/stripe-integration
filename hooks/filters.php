@@ -1,6 +1,6 @@
 <?php
 
-add_filter('post.add.customer', 'stripe_tokenize', 10, 1);
+add_filter('post.addnew.customer', 'stripe_tokenize', 10, 1);
 
 function stripe_tokenize($data) {
 
