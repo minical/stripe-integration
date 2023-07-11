@@ -374,6 +374,13 @@ class ProcessPayment
                 false
             );
 
+            if(
+                isset($stripe_token_resp['error']) &&
+                $stripe_token_resp['error']
+            ) {
+                return $stripe_token_resp['error'];
+            }
+
             $token = $stripe_token_resp['id'];
             $cust_id_resp = $this->create_customer_id($token);
 
