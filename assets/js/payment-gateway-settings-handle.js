@@ -34,7 +34,7 @@ innGrid._getHorizontalInput = function (label, name, value)
             $("<input/>", {
                 class: "form-control sensitive_field",
                 name: name,
-                value: value,
+                value: value == 'stripe' ? '' : value,
                 type: (name == 'gateway_login' || name == 'gateway_app_id' || name == 'gateway_user') ? "text" : "password"
             })
         )
