@@ -358,30 +358,38 @@ class ProcessPayment
 
             $stripe_secret_key = $this->stripe_private_key;
 
-            $headers = array(
-                "Authorization: Bearer " . $stripe_secret_key,
-                "Content-Type: application/x-www-form-urlencoded"
-            );
+            // $headers = array(
+            //     "Authorization: Bearer " . $stripe_secret_key,
+            //     "Content-Type: application/x-www-form-urlencoded"
+            // );
             
-            $data = "card[number]=%CARD_NUMBER%&card[exp_month]=%EXPIRATION_MM%&card[exp_year]=%EXPIRATION_YYYY%&card[cvc]=%SERVICE_CODE%";
+            // $data = "card[number]=%CARD_NUMBER%&card[exp_month]=%EXPIRATION_MM%&card[exp_year]=%EXPIRATION_YYYY%&card[cvc]=%SERVICE_CODE%";
 
-            $stripe_token_resp = send_card_request(
-                $this->stripe_url."tokens",
-                json_decode($customer['meta_data'])->token,
-                $data,
-                $headers,
-                'POST',
-                false
-            );
+            // $stripe_token_resp = send_card_request(
+            //     $this->stripe_url."tokens",
+            //     json_decode($customer['meta_data'])->token,
+            //     $data,
+            //     $headers,
+            //     'POST',
+            //     false
+            // );
 
-            if(
-                isset($stripe_token_resp['error']) &&
-                $stripe_token_resp['error']
+            // if(
+            //     isset($stripe_token_resp['error']) &&
+            //     $stripe_token_resp['error']
+            // ) {
+            //     return $stripe_token_resp['error'];
+            // }
+
+            $token = "";
+
+            if(isset(json_decode($customer['meta_data'])->stripe_token) &&
+                json_decode($customer['meta_data'])->stripe_token
             ) {
-                return $stripe_token_resp['error'];
+                $token = json_decode($customer['meta_data'])->stripe_token;
             }
 
-            $token = $stripe_token_resp['id'];
+            // $token = $stripe_token_resp['id'];
             $cust_id_resp = $this->create_customer_id($token);
 
             if(
@@ -666,6 +674,28 @@ class ProcessPayment
     }
 
     public function create_token($cvc, $cc_number, $cc_expiry_month, $cc_expiry_year)
+    {
+
+        $stripe_secret_key = $this->stripe_private_key;
+
+        $stripe = new Stripe\StripeClient($stripe_secret_key);
+
+        $stripe_token_resp = $stripe->tokens->create([
+            'card' => [
+                'number' => $cc_number,
+                'exp_month' => $cc_expiry_month,
+                'exp_year' => $cc_expiry_year,
+                'cvc' => $cvc,
+            ],
+        ]);
+
+        $stripe_token_response = json_decode(json_encode($stripe_token_resp, true), true);
+
+        return array('success' => true, 'token' => $stripe_token_response['id'], 'cc_last_digits' => $stripe_token_response['card']['last4']);
+
+    }
+
+    public function create_stripe_token($cvc, $cc_number, $cc_expiry_month, $cc_expiry_year)
     {
 
         $stripe_secret_key = $this->stripe_private_key;
