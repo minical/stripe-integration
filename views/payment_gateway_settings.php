@@ -24,13 +24,6 @@
 	</div>
 
 	<div class="col-sm-12 text-center">
-    <?php 
-    if (isset($stripeData['stripe_secret_key']) && $stripeData['stripe_secret_key'] != "" && isset($stripeData['stripe_publishable_key'])  && $stripeData['stripe_publishable_key'] != "" ) { ?>    
-     
-    <button class="btn btn-light update" id="update-button" ><?php echo l('stripe-integration/Update', true); ?></button>
-    <button type="button" class="btn btn-danger deconfigure-stripe" ><?=l("Deconfigure");?></button>
-    <?php } else { ?>
-        <button class="btn btn-light update" id="update-button" ><?php echo l('stripe-integration/Update', true); ?></button>
-    <?php } ?>
-    </div>
+		<div class="btn btn-light" id="update-button"><?php echo l('stripe-integration/update'); ?></div>
+	</div>
 </div>	
