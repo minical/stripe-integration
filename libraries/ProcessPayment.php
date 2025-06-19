@@ -383,10 +383,10 @@ class ProcessPayment
 
             $token = "";
 
-            if(isset(json_decode($customer['meta_data'])->stripe_token) &&
-                json_decode($customer['meta_data'])->stripe_token
+            if(isset(json_decode($customer['meta_data'])->token) &&
+                json_decode($customer['meta_data'])->token
             ) {
-                $token = json_decode($customer['meta_data'])->stripe_token;
+                $token = json_decode($customer['meta_data'])->token;
             }
 
             // $token = $stripe_token_resp['id'];
@@ -597,7 +597,8 @@ class ProcessPayment
      */
     public function getPaymentGatewayPaymentType($payment_type, $company_id = null)
     {
-        $settings = $this->getCompanyGatewaySettings();
+        $payment_type = 'Stripe';
+        $settings   = $this->getCompanyGatewaySettings();
         $company_id = $company_id ?: $settings['company_id'];
 
         $row = $this->query("select * from payment_type WHERE payment_type = '$payment_type' and company_id = '$company_id'");

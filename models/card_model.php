@@ -118,10 +118,28 @@ class Card_model extends CI_Model {
 		}
     }
 
-    function deconfigure_stripe_apikey($company_id){
+    function update_customer_primary_card($customer_id, $data)
+    {   
+		$data = (object) $data;
+        $this->db->where('is_primary', 1);
+		$this->db->where('customer_id', $customer_id);
+        $this->db->update("customer_card_detail", $data);
+        if($this->db->affected_rows() > 0){
+            return true;
+        }else{
+            return false;
+        }
+    }
 
-		$this->db->where('company_id', $company_id);
-		$this->db->where('selected_payment_gateway', 'stripe');
-		$this->db->delete('company_payment_gateway');
-	}
+    function update_customer_card_info($customer_id, $data)
+    {
+        $data = (object) $data;
+		$this->db->where('customer_id', $customer_id);
+        $this->db->update("customer_card_detail", $data);
+        if($this->db->affected_rows() > 0){
+            return true;
+        }else{
+            return false;
+        }
+    }
 }
