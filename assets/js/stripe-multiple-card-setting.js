@@ -11,29 +11,32 @@ document.addEventListener("post.open_card_model", function (e) {
         !$('#cc_number').val() &&
         !$('input[name="cc_expiry"]').val() &&
         !$('input[name="cvc"]').val()
-    );
+        );
 
-    if ((customerId && typeof cardId === 'undefined') || isFormFieldsEmpty) {
+    if(innGrid.featureSettings.stripePublicKey !== ''){
 
-        $('.credit_card_field').hide();
+        if ((customerId && typeof cardId === 'undefined') || isFormFieldsEmpty) {
 
-        const stripeButtonHtml = `
-            <div class="form-group stripe_multiple_card_button">
-                <label for="stripe_card_data" class="col-sm-4">Card Details</label>
-                <div class="col-sm-8">
-                    <button type="button" class="btn btn-info strp_card_btn" onclick="show_card_iframe()">Add Card Details</button>
+            $('.credit_card_field').hide();
+
+            const stripeButtonHtml = `
+                <div class="form-group stripe_multiple_card_button">
+                    <label for="stripe_card_data" class="col-sm-4">Card Details</label>
+                    <div class="col-sm-8">
+                        <button type="button" class="btn btn-info strp_card_btn" onclick="show_card_iframe()">Add Card Details</button>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
 
-        $('#card_name').parent('.form-group').after(stripeButtonHtml);
-    } else {
-        $('.credit_card_field').show();
+            $('#card_name').parent('.form-group').after(stripeButtonHtml);
+        } else {
+            $('.credit_card_field').show();
+        }
+
+        setTimeout(function () {
+            $('.strp_card_btn').trigger('click');
+        }, 500);
     }
-
-    setTimeout(function () {
-        $('.strp_card_btn').trigger('click');
-    }, 500);
 });
 
 
@@ -77,7 +80,8 @@ async function show_card_iframe() {
         }
     };
 
-    const multipleCard = cardElements.create('card', { style: style });
+    // const multipleCard = cardElements.create('card', { style: style });
+    const multipleCard = cardElements.create('card', { style: style, hidePostalCode: true });
     multipleCard.mount('#multiple-card-element');
 
     const multipleCardButton = document.getElementById('multiple-card-button');

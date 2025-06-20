@@ -8,10 +8,37 @@ document.addEventListener("post.open_customer_model", function (e) {
             (
                 e && 
                 e.detail && 
-                e.detail.customer_id == ''
-            ) || 
+                e.detail.customer_id == '' &&
+                innGrid.featureSettings.stripePublicKey !== ''
+            ) && 
             (
                 $('#cc_number').val() == '' && 
+                $('input[name="cc_expiry"]').val() == '' &&
+                $('input[name="cvc"]').val() == ''
+            ) 
+        ){
+
+        $('.cc_field').css('display', 'none');
+         
+         
+        var stripe_card_button = '<div class="form-group form-group-sm stripe_card_button">'+
+                                    '<label for="stripe_card_data" class="col-sm-3 control-label">Stripe Card Details</label>'+
+                                    '<div class="col-sm-9">'+
+                                        '<button type="button" class="btn btn-info stripe_card_btn" onclick="show_iframe()">Add Card Details</button>'+
+                                    '</div>'+
+                                '</div>';
+
+        // var stripe_card_button = '<div id="card-element"><!-- Stripe will inject an iframe here --></div>'+
+        //                             '<button id="submit">Pay Now</button>';
+         $('.form-group.form-group-sm.customer_field_12').after(stripe_card_button);
+    } else if (
+            (
+                e && 
+                e.detail && 
+                e.detail.customer_id != ''
+            ) && 
+            (
+                $('#cc_number').val() === 'XXXX XXXX XXXX XXXX' && 
                 $('input[name="cc_expiry"]').val() == '' &&
                 $('input[name="cvc"]').val() == ''
             ) 
@@ -76,7 +103,7 @@ async function show_iframe(){
         }
     };
 
-    const card = elements.create('card', { style: style });
+    const card = elements.create('card', { style: style, hidePostalCode: true });
     card.mount('#card-element');
 
     const cardButton = document.getElementById('card-button');
