@@ -1,4 +1,3 @@
-// $('.cc_details').css('display', 'none');
 var customerID;
 var gatewayName = 'stripe';
 var sandBoxMode = false;
@@ -6,20 +5,29 @@ var sandBoxMode = false;
 let card = null; // Make card accessible globally
 let stripe = null;
 
-var stripe_card_button = '<div class="form-group form-group-sm stripe_card_button">'+
-                            '<label for="stripe_card_data" class="col-sm-3 control-label">Stripe Card Details</label>'+
-                            '<div class="col-sm-9">'+
-                                '<button type="button" class="btn btn-info stripe_card_btn" onclick="show_iframe()">Add Card Details</button>'+
-                            '</div>'+
-                        '</div>';
+
+stripePublicKey = $('#stripe_public_key').val();
+console.log('stripePublicKey', stripePublicKey);
+
+if(stripePublicKey !== '' && stripePublicKey !== 'stripe'){
+
+    var stripe_card_button = '<div class="form-group form-group-sm stripe_card_button">'+
+                                '<label for="stripe_card_data" class="col-sm-3 control-label">Stripe Card Details</label>'+
+                                '<div class="col-sm-9">'+
+                                    '<button type="button" class="btn btn-info stripe_card_btn" onclick="show_iframe()">Add Card Details</button>'+
+                                '</div>'+
+                            '</div>';
 
 
-$('.add_stripe_details').hide();
-$('.add_stripe_details').after(stripe_card_button);
+    $('.add_stripe_details').hide();
+    $('.add_stripe_details').after(stripe_card_button);
 
-setTimeout(function(){
-	$('.stripe_card_btn').trigger('click');
-}, 500);
+    setTimeout(function(){
+    	$('.stripe_card_btn').trigger('click');
+    }, 500);
+} else {
+    $('.cc_details').show();
+}
 
 async function show_iframe() {
     const stripe_iframe = 

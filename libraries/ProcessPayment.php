@@ -398,6 +398,7 @@ class ProcessPayment
             ){
                 $meta['customer_id'] = $cust_id_resp['customer_id'];
                 $meta['token'] = $token;
+                $meta['source'] = 'stripe';
                 $card_details['customer_meta_data'] = json_encode($meta);
 
                 if($card_details && count($card_details) > 0) {

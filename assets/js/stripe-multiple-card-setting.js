@@ -13,7 +13,10 @@ document.addEventListener("post.open_card_model", function (e) {
         !$('input[name="cvc"]').val()
         );
 
-    if(innGrid.featureSettings.stripePublicKey !== ''){
+    if(
+        innGrid.featureSettings.stripePublicKey !== '' &&
+        innGrid.featureSettings.stripePublicKey !== 'stripe'
+    ){
 
         if ((customerId && typeof cardId === 'undefined') || isFormFieldsEmpty) {
 

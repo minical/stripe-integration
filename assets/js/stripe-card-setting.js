@@ -4,12 +4,14 @@ document.addEventListener("post.open_customer_model", function (e) {
     console.log('e',e);
     console.log('e.detail',e.detail);
     console.log('e.detail.customer_id',e.detail.customer_id);
+    console.log('innGrid.featureSettings.stripePublicKey',innGrid.featureSettings.stripePublicKey);
     if (
             (
                 e && 
                 e.detail && 
                 e.detail.customer_id == '' &&
-                innGrid.featureSettings.stripePublicKey !== ''
+                innGrid.featureSettings.stripePublicKey !== '' &&
+                innGrid.featureSettings.stripePublicKey !== 'stripe'
             ) && 
             (
                 $('#cc_number').val() == '' && 
@@ -35,10 +37,13 @@ document.addEventListener("post.open_customer_model", function (e) {
             (
                 e && 
                 e.detail && 
-                e.detail.customer_id != ''
-            ) && 
+                e.detail.customer_id != '' &&
+                innGrid.featureSettings.stripePublicKey !== '' &&
+                innGrid.featureSettings.stripePublicKey !== 'stripe'
+            ) 
+            && 
             (
-                $('#cc_number').val() === 'XXXX XXXX XXXX XXXX' && 
+                //$('#cc_number').val() === 'XXXX XXXX XXXX XXXX' && 
                 $('input[name="cc_expiry"]').val() == '' &&
                 $('input[name="cvc"]').val() == ''
             ) 
