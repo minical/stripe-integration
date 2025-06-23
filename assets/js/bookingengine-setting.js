@@ -12,7 +12,7 @@ console.log('stripePublicKey', stripePublicKey);
 if(stripePublicKey !== '' && stripePublicKey !== 'stripe'){
 
     var stripe_card_button = '<div class="form-group form-group-sm stripe_card_button">'+
-                                '<label for="stripe_card_data" class="col-sm-3 control-label">Stripe Card Details</label>'+
+                                '<label for="stripe_card_data" class="col-sm-3 control-label">Credit Card Details</label>'+
                                 '<div class="col-sm-9">'+
                                     '<button type="button" class="btn btn-info stripe_card_btn" onclick="show_iframe()">Add Card Details</button>'+
                                 '</div>'+
