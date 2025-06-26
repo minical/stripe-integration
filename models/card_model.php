@@ -131,10 +131,14 @@ class Card_model extends CI_Model {
         }
     }
 
-    function update_customer_card_info($customer_id, $data)
+    function update_customer_card_info($customer_id, $data, $card_id = null)
     {
         $data = (object) $data;
 		$this->db->where('customer_id', $customer_id);
+
+		if($card_id)
+			$this->db->where('id', $card_id);
+
         $this->db->update("customer_card_detail", $data);
         if($this->db->affected_rows() > 0){
             return true;

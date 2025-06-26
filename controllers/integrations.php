@@ -201,8 +201,10 @@ class Integrations extends MY_Controller
 
                 $existing_card_data = $this->Card_model->get_active_card($customer_id, $this->company_id);
 
+                $card_id = $existing_card_data['id'];
+
                 if(!empty($existing_card_data)){
-                    $this->Card_model->update_customer_card_info($customer_id, $card_details);
+                    $this->Card_model->update_customer_card_info($customer_id, $card_details, $card_id);
                 } else{
                     $this->Card_model->create_customer_card_info($card_details);
                 }
