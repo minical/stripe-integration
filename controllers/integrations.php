@@ -124,7 +124,7 @@ class Integrations extends MY_Controller
 
     function check_stripe_token_availability(){
         $customer_id = $this->input->post('customer_id');
-        $customer_details = $this->Card_model->get_customer_cards($customer_id);
+        $customer_details = $this->Card_model->get_customer_cards($customer_id, true);
 
         $response = array('success' => false);
 

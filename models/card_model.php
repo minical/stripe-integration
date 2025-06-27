@@ -6,11 +6,15 @@ class Card_model extends CI_Model {
         parent::__construct();
     }
     
-    function get_customer_cards($customer_id)
+    function get_customer_cards($customer_id, $is_primary = false)
 	{
 		$this->db->select('cc.*, c.stripe_customer_id');
 		$this->db->where('cc.customer_id', $customer_id);
 		$this->db->where('cc.is_card_deleted', 0);
+
+		if($is_primary)
+			$this->db->where('cc.is_primary', 1);
+
     	$this->db->from('customer_card_detail as cc');
 		$this->db->join('customer as c', 'cc.customer_id = c.customer_id', 'left');
         $query = $this->db->get();		
