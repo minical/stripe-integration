@@ -120,8 +120,18 @@ async function show_iframe(){
             stripe.createToken(card).then(function(result) {
                 if (result.error) {
                     alert(result.error.message);
+
+                    console.error('Token error:', result.error);
+                    statusContainer.innerHTML = "Please enter valid card details.";
+                    statusContainer.style.color = "red";
+                    $('#button-update-customer').prop('disabled', false);
+                    return;
+
+
                 } else {
                     console.log(`Result is`, result);
+
+                    statusContainer.style.color = "black";
 
                     statusContainer.innerHTML = "Retrieve token successfully";
                     stripeToken.innerHTML = result.token.id;

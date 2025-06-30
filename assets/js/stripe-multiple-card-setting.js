@@ -95,10 +95,14 @@ async function show_card_iframe() {
             const result = await stripeCard.createToken(multipleCard);
             if (result.error) {
                 console.error('Token error:', result.error);
-                alert(result.error.message);
-                statusContainer.innerHTML = "Failed to create token.";
+                statusContainer.innerHTML = "Please enter valid card details.";
+                statusContainer.style.color = "red";
+                $("#save_card").prop('disabled', false);
+                return;
             } else {
                 console.log('Token created:', result.token);
+
+                statusContainer.style.color = "black";
 
                 statusContainer.innerHTML = "Token created successfully";
 
