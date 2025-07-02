@@ -70,6 +70,8 @@
             var available_gateway = $('.paid-by-customers').children('option:selected').data('available-gateway');
             
         }else{
+            $("#add_payment_normal").show();
+            $("#add_stripe_payment").remove();
             $('.cc_details').remove();
             $('#gateway_option').remove();
             $('#cvc-field').remove();
