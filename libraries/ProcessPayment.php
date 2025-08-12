@@ -302,6 +302,12 @@ class ProcessPayment
                 $error = $e->getMessage();
                 $this->setErrorMessage($error);
             }
+        } else {
+            // Use the actual error from Stripe if available
+            $error_message = $this->stripe_error_message ?? 'Payment gateway not available.';
+
+            $this->setErrorMessage($error_message);
+            return false;
         }
 
         return $charge_id;
@@ -404,7 +410,11 @@ class ProcessPayment
                 if($card_details && count($card_details) > 0) {
                     $this->ci->Card_model->update_customer_primary_card($customer_id, $card_details);
                 }
-            } 
+            } else {
+                // Stripe failure handling
+                $this->stripe_error_message = $cust_id_resp['error'];
+                return false;
+            }
 
             $customer = $this->ci->Customer_model->get_customer($customer_id);
         
@@ -655,25 +665,53 @@ class ProcessPayment
 
     public function create_customer_id($token)
     {
-
         $stripe_secret_key = $this->stripe_private_key;
 
-        $cust_data = array();
+        if (empty($stripe_secret_key)) {
+            return ['success' => false, 'error' => 'Stripe key missing.'];
+        }
 
-        $stripe = new Stripe\StripeClient($stripe_secret_key);
+        if (!preg_match('/^(tok|src|pm)_[a-zA-Z0-9]+$/', $token)) {
+            return ['success' => false, 'error' => 'Invalid Stripe token format.'];
+        }
 
-        $description = 'Minical-stripe-customer-id' . strtotime(date('Y-m-d H:i:s'));
+        try {
+            $stripe = new \Stripe\StripeClient($stripe_secret_key);
 
-        $customer_response = $stripe->customers->create([
-            'description' => $description,
-            'card' => $token,
-        ]);
+            // Optional: validate token before using
+            $token_data = $stripe->tokens->retrieve($token);
+            if (!$token_data || !isset($token_data->id)) {
+                return ['success' => false, 'error' => 'Stripe token is invalid or expired.'];
+            }
 
-        $customer_response = json_decode(json_encode($customer_response, true), true);
+            $description = 'Minical-stripe-customer-id-' . time();
 
-        return array('success' => true, 'customer_id' => $customer_response['id']);
+            $customer = $stripe->customers->create([
+                'description' => $description,
+                'source' => $token,
+            ]);
+
+            return ['success' => true, 'customer_id' => $customer->id];
+
+        } catch (\Stripe\Exception\InvalidRequestException $e) {
+            $msg = $e->getMessage();
+            if (strpos($msg, 'No such token') !== false || strpos($msg, 'not created in') !== false) {
+                return ['success' => false, 'error' => 'Token mismatch: Token not valid for this Stripe account. Please check secret/public keys.'];
+            }
+            return ['success' => false, 'error' => 'Stripe invalid request: ' . $msg];
+
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            // All other Stripe API errors (e.g., auth, rate limit, etc.)
+            return ['success' => false, 'error' => 'Stripe API error: ' . $e->getMessage()];
+
+        } catch (\Exception $e) {
+            // Any other PHP runtime errors
+            return ['success' => false, 'error' => 'General error: ' . $e->getMessage()];
+        }
 
     }
+
+
 
     public function create_token($cvc, $cc_number, $cc_expiry_month, $cc_expiry_year)
     {
