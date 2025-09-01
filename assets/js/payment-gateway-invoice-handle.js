@@ -246,6 +246,8 @@ function proceedWithPayment() {
             method : 'post',
             dataType: 'json',
             data   : {
+                group_id: $("#group_id").val(),
+                payment_distribution: $("select[name='payment_distribution']").val(),
                 payment_amount: $("input[name='payment_amount']").val(),
                 booking_id      : $("#booking_id").val(),
                 payment_date    : innGrid._getBaseFormattedDate($("input[name='payment_date']").val()),

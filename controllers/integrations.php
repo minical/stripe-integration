@@ -216,96 +216,224 @@ class Integrations extends MY_Controller
     }
 
     function add_stripe_payment(){
-        $data = Array(
-            "user_id" => $this->session->userdata('user_id'),
-            "booking_id" => $this->input->post('booking_id'),
-            "selling_date" => date('Y-m-d', strtotime($this->input->post('payment_date'))),
-            "amount" => $this->input->post('payment_amount'),
-            "customer_id" => $this->input->post('customer_id'),
-            "payment_type_id" => $this->input->post('payment_type_id'),
-            "description" => $this->input->post('description'),
-            "date_time" => gmdate("Y-m-d H:i:s"),
-            "selected_gateway" => $this->input->post('selected_gateway')
-        );
 
-        $payment_folio_id = $this->input->post('folio_id');
-        $payment_folio_id = $payment_folio_id ? $payment_folio_id : 0;
-        $card_data = $this->Card_model->get_active_card($data['customer_id'], $this->company_id);
-        $data['credit_card_id'] = null;
-        if (isset($card_data) && $card_data) {
-            $data['credit_card_id'] = $card_data['id'];
+        $group_id = $this->input->post('group_id');
+        
+        if($group_id)
+        {
+            $selling_date = sqli_clean($this->security->xss_clean($this->input->post('payment_date')));
+            $payment_type_id = sqli_clean($this->security->xss_clean($this->input->post('payment_type_id')));
+            $customer_id = sqli_clean($this->security->xss_clean($this->input->post('customer_id')));
+            $total_balance = sqli_clean($this->security->xss_clean($this->input->post('payment_amount')));
+            $description = sqli_clean($this->security->xss_clean($this->input->post('description')));
+            //$cvc = sqli_clean($this->security->xss_clean($this->input->post('cvc')));
+            $distribute_equal_amount = $this->input->post('payment_distribution');
+            $folio_id = sqli_clean($this->security->xss_clean($this->input->post('folio_id')));
+            // $capture_payment = sqli_clean($this->security->xss_clean(trim($this->input->post('capture_payment_type'))));
+
+            $get_bookings_by_group_id = $this->Booking_model->get_bookings_by_group_id($group_id, true);
+            // prx($get_bookings_by_group_id);
+            $remaining_balance = $total_balance;
+            $no_of_bookings = count($get_bookings_by_group_id);
+            $equal_amount = $total_balance / $no_of_bookings;
+            $round_total_amount = (round($equal_amount,2)) * $no_of_bookings;
+            $amount_diff = round(($round_total_amount - $total_balance), 2);
+            
+            $company_data =  $this->Company_model->get_company($this->company_id);
+            //$capture_payment_type = $company_data['manual_payment_capture'];
+            //$capture_payment_type = ($capture_payment != 'authorize_only') ? false : true;
+             
+            $i = 1;
+            $response = array();
+            foreach ($get_bookings_by_group_id as $booking)
+            {
+                $balance = $booking['balance'];
+                
+                if($distribute_equal_amount == "Yes")
+                {
+                    if($i == $no_of_bookings && $amount_diff != 0)
+                    {
+                        $amount = $equal_amount - $amount_diff;
+                        $amount = round($amount, 2);
+                    }
+                    else
+                    {
+                        $amount = round($equal_amount, 2);
+                    }                
+                }
+                else
+                {
+                    $amount = $balance;
+                    if($remaining_balance < $balance)
+                    {
+                        $amount = $remaining_balance;
+                    }
+                }
+                if($remaining_balance <= 0){
+                    $response = array(
+                        'success' => false,
+                        'message' => 'You cannot make a payment for a negative amount on a group invoice. Please process a refund through the individual bookings instead.'
+                    );
+                    break;
+                }
+                
+                $data = Array(
+                    "user_id" => $this->user_id,
+                    "booking_id" => $booking['booking_id'],
+                    "selling_date" => $selling_date,
+                    "customer_id" => $customer_id,
+                    "amount" => $amount,
+                    "payment_type_id" => $payment_type_id,
+                    "description" => $description,
+                    "date_time" => gmdate("Y-m-d H:i:s"),
+                    "selected_gateway" => $this->input->post('selected_gateway'),
+                );
+                $card_data = $this->Card_model->get_active_card($customer_id, $this->company_id);
+                $data['credit_card_id'] = "";
+                if(isset($card_data) && $card_data){
+                     $data['credit_card_id'] = $card_data['id'];
+                }
+                
+                if($data['amount'] > 0)
+                {
+                    $response = $this->Payment_model->insert_payment($data);
+                }
+                else
+                {
+                    $response = array('success' => false, 'message' => 'All the bookings in this group are already Paid in full.');
+                }
+                if($response['success'] == false){
+                    $response[] = array(
+                                    "booking_id" => $booking['booking_id'],
+                                    "error_msg" =>  $response['message']
+                                );
+                }
+                elseif($response['success'])
+                {
+
+                    $post_payment_data = $response;
+                    $post_payment_data['payment_id'] = $response['payment_id'];
+
+                    do_action('post.create.payment', $post_payment_data);
+
+                    $invoice_log_data = array();
+                    $invoice_log_data['date_time'] = gmdate('Y-m-d h:i:s');
+                    $invoice_log_data['booking_id'] = $booking['booking_id'];
+                    $invoice_log_data['user_id'] = $this->session->userdata('user_id');
+                    $invoice_log_data['action_id'] = $company_data['manual_payment_capture'] ? AUTHORIZED_PAYMENT : CAPTURED_PAYMENT;
+                    $invoice_log_data['charge_or_payment_id'] = $response['payment_id'];
+                    $invoice_log_data['new_amount'] = $amount;
+                    if($invoice_log_data['charge_or_payment_id'])
+                    {
+                        $this->Payment_model->insert_payment_folio(array('payment_id' => $response['payment_id'], 'folio_id' => $folio_id));
+                        
+                        $invoice_log_data['log'] = $company_data['manual_payment_capture'] ? 'Payment Authorized' : 'Payment Captured';
+                        $this->Invoice_log_model->insert_log($invoice_log_data);
+                    }
+                    $this->Booking_model->update_booking_balance($booking['booking_id']);
+                }
+                $i++;
+                $remaining_balance -= $amount; 
+            }
+            
+            if (!empty($response)) {
+                echo json_encode($response);
+            }
         }
 
-        $payment_type_id               = &$data['payment_type_id'];
-        $use_gateway                   = ($payment_type_id == 'gateway');
+        else {
 
-        if($use_gateway){
-
-            $payment_type    = $this->processpayment->getPaymentGatewayPaymentType($data['selected_gateway']);
-            $payment_type_id = $payment_type['payment_type_id'];
-
-            $gateway_charge_id = $this->processpayment->createBookingCharge(
-                $data['booking_id'],
-                abs($data['amount']), // in cents, only positive
-                $data['customer_id']
+            $data = Array(
+                "user_id" => $this->session->userdata('user_id'),
+                "booking_id" => $this->input->post('booking_id'),
+                "selling_date" => date('Y-m-d', strtotime($this->input->post('payment_date'))),
+                "amount" => $this->input->post('payment_amount'),
+                "customer_id" => $this->input->post('customer_id'),
+                "payment_type_id" => $this->input->post('payment_type_id'),
+                "description" => $this->input->post('description'),
+                "date_time" => gmdate("Y-m-d H:i:s"),
+                "selected_gateway" => $this->input->post('selected_gateway')
             );
 
-            $error = $this->processpayment->getErrorMessage();
-        }
-
-        // if(isset($gateway_charge_id[0]) && isset($gateway_charge_id[0]['code'])){
-        //     $error = $gateway_charge_id;
-        // } else if($gateway_charge_id == 'Tokenization service is not available.'){
-        //     $error = $gateway_charge_id;
-        // }
-        
-        if ($use_gateway && $gateway_charge_id) {
-            $data['payment_gateway_used'] = $this->processpayment->getSelectedGateway();
-            $data['gateway_charge_id'] = $gateway_charge_id;
-            $data['is_captured'] = 1;
-            $data['description'] = isset($data['description']) && $data['description'] ? $data['description'].'<br/>' : '';
-
-            // insert payment
-        
-            $data['payment_status'] = 'charge';
-            unset($data['selected_gateway']);
-            $this->db->insert('payment', $data);            
-            $query = $this->db->query('select LAST_INSERT_ID( ) AS last_id');
-            $result = $query->result_array();
-            if(isset($result[0]))
-            {
-                $payment_id = $result[0]['last_id'];
+            $payment_folio_id = $this->input->post('folio_id');
+            $payment_folio_id = $payment_folio_id ? $payment_folio_id : 0;
+            $card_data = $this->Card_model->get_active_card($data['customer_id'], $this->company_id);
+            $data['credit_card_id'] = null;
+            if (isset($card_data) && $card_data) {
+                $data['credit_card_id'] = $card_data['id'];
             }
 
-            $invoice_log_data = array();
-            $invoice_log_data['date_time'] = gmdate('Y-m-d h:i:s');
-            $invoice_log_data['booking_id'] = $this->input->post('booking_id');
-            $invoice_log_data['user_id'] = $this->session->userdata('user_id');
-            $invoice_log_data['action_id'] = CAPTURED_PAYMENT;
-            $invoice_log_data['charge_or_payment_id'] = $payment_id;
-            $invoice_log_data['new_amount'] = $this->input->post('payment_amount');
-            if ($payment_id && $invoice_log_data['charge_or_payment_id']) {
-                $this->Payment_model->insert_payment_folio(array('payment_id' => $payment_id, 'folio_id' => $payment_folio_id));
-                $invoice_log_data['log'] = 'Payment Captured';
-                $this->Invoice_log_model->insert_log($invoice_log_data);
+            $payment_type_id               = &$data['payment_type_id'];
+            $use_gateway                   = ($payment_type_id == 'gateway');
+
+            if($use_gateway){
+
+                $payment_type    = $this->processpayment->getPaymentGatewayPaymentType($data['selected_gateway']);
+                $payment_type_id = $payment_type['payment_type_id'];
+
+                $gateway_charge_id = $this->processpayment->createBookingCharge(
+                    $data['booking_id'],
+                    abs($data['amount']), // in cents, only positive
+                    $data['customer_id']
+                );
+
+                $error = $this->processpayment->getErrorMessage();
             }
-            else {
-                $invoice_log_data['charge_or_payment_id'] = 0;
-                $invoice_log_data['log'] = isset($error) && $error ? $error : '';
-                $this->Invoice_log_model->insert_log($invoice_log_data);
+
+            // if(isset($gateway_charge_id[0]) && isset($gateway_charge_id[0]['code'])){
+            //     $error = $gateway_charge_id;
+            // } else if($gateway_charge_id == 'Tokenization service is not available.'){
+            //     $error = $gateway_charge_id;
+            // }
+            
+            if ($use_gateway && $gateway_charge_id) {
+                $data['payment_gateway_used'] = $this->processpayment->getSelectedGateway();
+                $data['gateway_charge_id'] = $gateway_charge_id;
+                $data['is_captured'] = 1;
+                $data['description'] = isset($data['description']) && $data['description'] ? $data['description'].'<br/>' : '';
+
+                // insert payment
+            
+                $data['payment_status'] = 'charge';
+                unset($data['selected_gateway']);
+                $this->db->insert('payment', $data);            
+                $query = $this->db->query('select LAST_INSERT_ID( ) AS last_id');
+                $result = $query->result_array();
+                if(isset($result[0]))
+                {
+                    $payment_id = $result[0]['last_id'];
+                }
+
+                $invoice_log_data = array();
+                $invoice_log_data['date_time'] = gmdate('Y-m-d h:i:s');
+                $invoice_log_data['booking_id'] = $this->input->post('booking_id');
+                $invoice_log_data['user_id'] = $this->session->userdata('user_id');
+                $invoice_log_data['action_id'] = CAPTURED_PAYMENT;
+                $invoice_log_data['charge_or_payment_id'] = $payment_id;
+                $invoice_log_data['new_amount'] = $this->input->post('payment_amount');
+                if ($payment_id && $invoice_log_data['charge_or_payment_id']) {
+                    $this->Payment_model->insert_payment_folio(array('payment_id' => $payment_id, 'folio_id' => $payment_folio_id));
+                    $invoice_log_data['log'] = 'Payment Captured';
+                    $this->Invoice_log_model->insert_log($invoice_log_data);
+                }
+                else {
+                    $invoice_log_data['charge_or_payment_id'] = 0;
+                    $invoice_log_data['log'] = isset($error) && $error ? $error : '';
+                    $this->Invoice_log_model->insert_log($invoice_log_data);
+                }
+
+                $this->Booking_model->update_booking_balance($data['booking_id']);
             }
 
-            $this->Booking_model->update_booking_balance($data['booking_id']);
-        }
+            // show error
+            if (!empty($error)) {
+                $response = array("success" => false, "message" => $error);
+            } else {
+                $response = array("success" => true, "payment_id" => $payment_id);
+            }
 
-        // show error
-        if (!empty($error)) {
-            $response = array("success" => false, "message" => $error);
-        } else {
-            $response = array("success" => true, "payment_id" => $payment_id);
+            echo json_encode($response);
         }
-
-        echo json_encode($response);
     }
 
 }
