@@ -9,7 +9,7 @@ class Integrations extends MY_Controller
 
         $this->load->model('../extensions/'.$this->module_name.'/models/Payment_gateway_model');
         $this->load->model('../extensions/'.$this->module_name.'/models/Employee_log_model');
-        $this->load->model('../extensions/'.$this->module_name.'/models/Booking_model');
+        $this->load->model('../extensions/'.$this->module_name.'/models/Bookings_model');
         $this->load->model('../extensions/'.$this->module_name.'/models/Card_model');
         $this->load->model('../extensions/'.$this->module_name.'/models/Customer_model');
         
@@ -92,7 +92,7 @@ class Integrations extends MY_Controller
         $booking_id = sqli_clean($this->security->xss_clean($this->input->post('booking_id')));
         
         $cus_assay = array();
-        $booking_data = $this->Booking_model->get_booking($booking_id);
+        $booking_data = $this->Bookings_model->get_booking($booking_id);
         $customer = $this->Card_model->get_customer_card_detail($booking_data['booking_customer_id']);
         $cus_assay[] = $customer ;
         $staying_customers = $this->Customer_model->get_staying_customers($booking_id);
@@ -231,7 +231,7 @@ class Integrations extends MY_Controller
             $folio_id = sqli_clean($this->security->xss_clean($this->input->post('folio_id')));
             // $capture_payment = sqli_clean($this->security->xss_clean(trim($this->input->post('capture_payment_type'))));
 
-            $get_bookings_by_group_id = $this->Booking_model->get_bookings_by_group_id($group_id, true);
+            $get_bookings_by_group_id = $this->Bookings_model->get_bookings_by_group_id($group_id, true);
             // prx($get_bookings_by_group_id);
             $remaining_balance = $total_balance;
             $no_of_bookings = count($get_bookings_by_group_id);
@@ -330,7 +330,7 @@ class Integrations extends MY_Controller
                         $invoice_log_data['log'] = $company_data['manual_payment_capture'] ? 'Payment Authorized' : 'Payment Captured';
                         $this->Invoice_log_model->insert_log($invoice_log_data);
                     }
-                    $this->Booking_model->update_booking_balance($booking['booking_id']);
+                    $this->Bookings_model->update_booking_balance($booking['booking_id']);
                 }
                 $i++;
                 $remaining_balance -= $amount; 
@@ -422,7 +422,7 @@ class Integrations extends MY_Controller
                     $this->Invoice_log_model->insert_log($invoice_log_data);
                 }
 
-                $this->Booking_model->update_booking_balance($data['booking_id']);
+                $this->Bookings_model->update_booking_balance($data['booking_id']);
             }
 
             // show error
