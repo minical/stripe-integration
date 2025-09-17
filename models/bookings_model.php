@@ -135,7 +135,20 @@ function get_booking($booking_id, $is_company = true)
             return $query->result_array();
         }
         return NULL; 
+    }
 
-              
+    function jsround($float, $precision = 0){
+        $float = floatval(number_format($float, 12, '.', ''));
+        if($float < 0){
+           return round($float, $precision, PHP_ROUND_HALF_DOWN);
+        }
+        return round($float, $precision);
+    }
+
+    function update_booking($booking_id, $data) 
+    {       
+        $data = (object) $data;
+        $this->db->where('booking_id', $booking_id);
+        $this->db->update("booking", $data);        
     }
 }
