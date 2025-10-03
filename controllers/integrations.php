@@ -242,6 +242,9 @@ class Integrations extends MY_Controller
             $company_data =  $this->Company_model->get_company($this->company_id);
             //$capture_payment_type = $company_data['manual_payment_capture'];
             //$capture_payment_type = ($capture_payment != 'authorize_only') ? false : true;
+
+            // For proportional distribution
+            $total_group_balance = array_sum(array_column($get_bookings_by_group_id, 'balance'));
              
             $i = 1;
             $response = array();
@@ -260,6 +263,20 @@ class Integrations extends MY_Controller
                     {
                         $amount = round($equal_amount, 2);
                     }                
+                }
+                elseif ($distribute_equal_amount == "Proportional") {
+                    // ✅ Proportional distribution
+                    if ($total_group_balance > 0) {
+                        $share_ratio = $balance / $total_group_balance;
+                        $amount = round($total_balance * $share_ratio, 2);
+
+                        // prevent overpay
+                        if ($amount > $balance) {
+                            $amount = $balance;
+                        }
+                    } else {
+                        $amount = 0;
+                    }
                 }
                 else
                 {
