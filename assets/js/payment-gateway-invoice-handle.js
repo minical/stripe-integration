@@ -241,59 +241,84 @@ function proceedWithPayment() {
     }, 2000);
 
     setTimeout(function() {
-        $.ajax({
-            url    : getBaseURL() + 'add_stripe_payment',
-            method : 'post',
-            dataType: 'json',
-            data   : {
-                group_id: $("#group_id").val(),
-                payment_distribution: $("select[name='payment_distribution']").val(),
-                payment_amount: $("input[name='payment_amount']").val(),
-                booking_id      : $("#booking_id").val(),
-                payment_date    : innGrid._getBaseFormattedDate($("input[name='payment_date']").val()),
-                payment_type_id : $("select[name='payment_type_id']").val(),
-                customer_id     : $("select[name='customer_id']").val(),
-                description     : $("textarea[name='description']").val(),
-                folio_id        : $('#current_folio_id').val(),
-                selected_gateway : $('input[name="'+innGrid.featureSettings.selectedPaymentGateway+'_use_gateway"]').data('gateway_name'),
-                // cc_details : ccData
-            },
-            success: function (data) { 
-                console.log('expire ',data);
-                if (data == "You don't have permission to access this functionality."){
-                    alert(data);
-                    $(that).prop("disabled", false);
-                    return;
-                }
-                
-                if(data.success){
-                   window.location.reload();
-                }
-                // else if(data.expire)
-                // {
-                //     window.location.href = getBaseURL() + 'settings/integrations/payment_gateways';
-                // }
-                else
-                {
-                    var error_html = "";
-                    // console.log(jQuery.isArray( data.message ));
-                    if(jQuery.isArray( data.message )){
-                        $.each(data.message, function(i,v){
-                            error_html += v.detail+'\n';
-                        });
-                        console.log(error_html);
-                        $('#display-errors').find('.modal-body').html(error_html.replace(/\n/g,'<br/>'));
-                        $('#display-errors').modal('show');
-                        // alert(error_html);
-                    } else {
-                        alert(data.message ? data.message : data);
+
+        var payFor = $("[name='pay_for']").val();
+        console.log('payFor',payFor);
+
+        if (payFor == "this_invoice_only") {
+            $.ajax({
+                url    : getBaseURL() + 'add_stripe_payment',
+                method : 'post',
+                dataType: 'json',
+                data   : {
+                    group_id: $("#group_id").val(),
+                    payment_distribution: $("select[name='payment_distribution']").val(),
+                    payment_amount: $("input[name='payment_amount']").val(),
+                    booking_id      : $("#booking_id").val(),
+                    payment_date    : innGrid._getBaseFormattedDate($("input[name='payment_date']").val()),
+                    payment_type_id : $("select[name='payment_type_id']").val(),
+                    customer_id     : $("select[name='customer_id']").val(),
+                    description     : $("textarea[name='description']").val(),
+                    folio_id        : $('#current_folio_id').val(),
+                    selected_gateway : $('input[name="'+innGrid.featureSettings.selectedPaymentGateway+'_use_gateway"]').data('gateway_name'),
+                    // cc_details : ccData
+                },
+                success: function (data) { 
+                    console.log('expire ',data);
+                    if (data == "You don't have permission to access this functionality."){
+                        alert(data);
+                        $(that).prop("disabled", false);
+                        return;
                     }
                     
-                    
+                    if(data.success){
+                       window.location.reload();
+                    }
+                    // else if(data.expire)
+                    // {
+                    //     window.location.href = getBaseURL() + 'settings/integrations/payment_gateways';
+                    // }
+                    else
+                    {
+                        var error_html = "";
+                        // console.log(jQuery.isArray( data.message ));
+                        if(jQuery.isArray( data.message )){
+                            $.each(data.message, function(i,v){
+                                error_html += v.detail+'\n';
+                            });
+                            console.log(error_html);
+                            $('#display-errors').find('.modal-body').html(error_html.replace(/\n/g,'<br/>'));
+                            $('#display-errors').modal('show');
+                            // alert(error_html);
+                        } else {
+                            alert(data.message ? data.message : data);
+                        }
+                        
+                        
+                        $(that).prop("disabled", false);
+                    }
+                }
+            });
+        } else if (payFor == 'all_bookings') {
+            $.post(getBaseURL() + 'customer/insert_payments_AJAX', {
+                bookings: unpaidBookings,
+                payment_type_id: $("select[name='payment_type_id']").val(),
+                customer_id: $("select[name='customer_id']").val(),
+                payment_date: innGrid._getBaseFormattedDate($("input[name='payment_date']").val()),
+                total_balance: totalBalance,
+                description: $("textarea[name='description']").val(),
+                cvc: $("input[name='cvc']").val(),
+                folio_id: $('#current_folio_id').val()
+            }, function(data) {
+                data = JSON.parse(data);
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message);
                     $(that).prop("disabled", false);
                 }
-            }
-        });
+            });
+        }
 
     }, 5000); // 2000 milliseconds = 2 seconds
 }

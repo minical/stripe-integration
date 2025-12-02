@@ -17,6 +17,7 @@ $config['js-files'] = array(
         "file" => 'https://js.stripe.com/v3/',
         "location" => array(
             "invoice/show_invoice",
+            "invoice/show_master_invoice",
             "booking/index",
             "online_reservation/book_reservation",
             "online_group_reservation/book_reservation",
