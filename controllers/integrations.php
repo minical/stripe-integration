@@ -87,25 +87,6 @@ class Integrations extends MY_Controller
         $this->Employee_log_model->insert_log($log_detail);     
     }
 
-    function get_customer_card_data()
-    {
-        $booking_id = sqli_clean($this->security->xss_clean($this->input->post('booking_id')));
-        
-        $cus_assay = array();
-        $booking_data = $this->Bookings_model->get_booking($booking_id);
-        $customer = $this->Card_model->get_customer_card_detail($booking_data['booking_customer_id']);
-        $cus_assay[] = $customer ;
-        $staying_customers = $this->Customer_model->get_staying_customers($booking_id);
-        if($staying_customers){
-             foreach($staying_customers as $cus){
-               $sta_data = $this->Card_model->get_customer_card_detail($cus['customer_id']);
-               $cus_assay[] = $sta_data;
-            } 
-        }
-           
-        echo json_encode($cus_assay); 
-    }
-
     public function update_customer_card_is_primary()
     {
         $customer_id = sqli_clean($this->security->xss_clean($this->input->post('customer_id')));
